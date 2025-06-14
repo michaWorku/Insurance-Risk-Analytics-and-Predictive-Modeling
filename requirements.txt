@@ -1,8 +1,32 @@
-# Add your project dependencies here
-# Example:
-# pandas
-# numpy
-# scikit-learn
-# dvc
-# pytest
-# flake8
+# Core Data Handling
+pandas
+numpy
+
+# EDA & Visualization
+matplotlib
+seaborn
+plotly
+
+# Statistical Analysis
+scipy
+statsmodels
+
+# Machine Learning
+scikit-learn
+xgboost
+
+# Model Interpretability
+shap
+lime
+
+# Data Version Control
+dvc
+
+# Dev Tools
+ipykernel
+jupyter
+python-dotenv
+
+# GitHub Actions (testing and linting support, optional)
+pytest
+flake8
