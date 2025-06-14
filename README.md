@@ -52,7 +52,7 @@ Key features include:
    ```
 
 
-## ▶️ Usage
+## Usage
 
 To run the main analytics or modeling workflows:
 
@@ -68,7 +68,7 @@ jupyter notebook notebooks/
 ```
 
 
-## 🗂️ Project Structure
+## Project Structure
 
 ```bash
 ├── .vscode/                 # VSCode specific settings
@@ -100,11 +100,11 @@ jupyter notebook notebooks/
 ```
 
 
-## 🤝 Contributing
+## Contributing
 
 Contributions are welcome! Please fork the repository, create a feature branch, and submit a pull request with clear documentation and commits.
 
 
-## 📄 License
+Contributions are welcome! Please fork the repository, create a feature branch, and submit a pull request with clear documentation and commits.
 
 This project is licensed under the [MIT License](LICENSE).
