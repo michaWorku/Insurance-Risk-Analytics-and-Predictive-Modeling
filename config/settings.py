@@ -13,7 +13,7 @@ class Settings:
     # DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite:///./test.db")
     
     # Add your application-specific settings here
-    APP_NAME: str = "Your Project Name"
+    APP_NAME: str = "Insurance-Risk-Analytics-and-Predictive-Modeling"
     DEBUG: bool = os.getenv("DEBUG", "False").lower() in ("true", "1", "t")
 
 settings = Settings()
