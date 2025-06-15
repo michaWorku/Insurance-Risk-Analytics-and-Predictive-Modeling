@@ -155,8 +155,8 @@ cython_debug/
 # Exclude actual data files, but allow .keep for empty directory structure
 data/raw/*
 !data/raw/.keep
-data/processed/*
-!data/processed/.keep
+# data/processed/*
+# !data/processed/.keep
 
 # Logs
 logs/
