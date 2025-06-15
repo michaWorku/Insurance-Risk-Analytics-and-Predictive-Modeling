@@ -33,3 +33,4 @@ jobs:
     - name: Test with pytest
       run: |
         pytest # Assumes tests are in the 'tests/' directory
+        echo "✅ No tests yet - coming soon"

@@ -3,13 +3,13 @@ requires = ["setuptools>=45", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "your_project_name" # Placeholder, update this
+name = "Insurance-Risk-Analytics-and-Predictive-Modeling" 
 version = "0.1.0"
-description = "A new Python project" # Placeholder, update this
+description = "End-to-End Insurance Risk Analytics & Predictive Modeling" 
 requires-python = ">=3.8"
-keywords = ["python", "project", "template"] # Placeholder, update this
+keywords = ["python", "project", "template"] 
 authors = [
-  { name = "Your Name", email = "your.email@example.com" }, # Placeholder, update this
+  { name = "Mikias Worku", email = "mikias27worku@gmail.com" },
 ]
 license = { file = "LICENSE" } # Create a LICENSE file if needed
 classifiers = [
@@ -19,8 +19,8 @@ classifiers = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/your_username/your_project_name" # Placeholder, update this
-"Bug Tracker" = "https://github.com/your_username/your_project_name/issues" # Placeholder, update this
+Homepage = "https://github.com/michaWorku/Insurance-Risk-Analytics-and-Predictive-Modeling" 
+"Bug Tracker" = "https://github.com/michaWorku/Insurance-Risk-Analytics-and-Predictive-Modeling/issues" 
 
 [tool.setuptools.packages.find]
 where = ["src"] # Tell setuptools to look for packages in src/
