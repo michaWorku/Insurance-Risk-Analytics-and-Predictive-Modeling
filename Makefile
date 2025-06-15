@@ -7,8 +7,8 @@ all: setup lint test
 setup:  ## Setup the project environment
 	@echo "Setting up virtual environment and installing dependencies..."
 	@if [ ! -d "venv" ]; then python3 -m venv venv; fi
-	@source venv/bin/activate && pip install --upgrade pip
-	@source venv/bin/activate && pip install -r requirements.txt
+	@./venv/bin/activate && pip install --upgrade pip
+	@./venv/bin/activate && pip install -r requirements.txt
 	@echo "Setup complete."
 
 clean:  ## Clean up build artifacts and temporary files
@@ -21,12 +21,12 @@ clean:  ## Clean up build artifacts and temporary files
 
 test:  ## Run all tests
 	@echo "Running tests..."
-	@source venv/bin/activate && pytest
+	@./venv/bin/activate && pytest
 	@echo "Tests complete."
 
 lint:  ## Run linters (flake8)
 	@echo "Running linting..."
-	@source venv/bin/activate && flake8 src/ tests/ scripts/
+	@./venv/bin/activate && flake8 src/ tests/ scripts/
 	@echo "Linting complete."
 
 docs:  ## Build documentation
@@ -36,7 +36,7 @@ docs:  ## Build documentation
 
 build:  ## Build the Python package
 	@echo "Building package..."
-	@source venv/bin/activate && python3 -m build
+	@./venv/bin/activate && python3 -m build
 	@echo "Package built to dist/."
 
 deploy:  ## Deploy the application (placeholder)
