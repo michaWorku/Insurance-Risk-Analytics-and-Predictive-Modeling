@@ -10,8 +10,6 @@ import os # For dummy data creation
 # Add current directory to path for import of data_loader and data_summarization
 sys.path.append(str(Path(__file__).parent.parent))
 from data_loader import load_data
-from data_summarization import calculate_loss_ratio # Re-use existing loss ratio calculation
-
 
 # Abstract Base Class for Temporal Analysis Strategy
 # --------------------------------------------------
