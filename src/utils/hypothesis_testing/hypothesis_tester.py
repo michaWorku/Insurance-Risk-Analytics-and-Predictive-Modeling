@@ -4,7 +4,6 @@ import numpy as np
 from pathlib import Path
 import sys
 project_root = Path.cwd()
-print(f"Adding project root to sys.path: {project_root}")
 if str(project_root) not in sys.path:
     sys.path.append(str(project_root))
 
