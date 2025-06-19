@@ -35,7 +35,7 @@ By integrating advanced analytics with business objectives, this project aims to
 1. **Clone the repository:**
     
     ```
-    git clone https://github.com/your-username/Insurance-Risk-Analytics-and-Predictive-Modeling.git # Update with your actual repo URL
+    git clone https://github.com/michaWorku/Insurance-Risk-Analytics-and-Predictive-Modeling.git 
     cd Insurance-Risk-Analytics-and-Predictive-Modeling
     
     ```
