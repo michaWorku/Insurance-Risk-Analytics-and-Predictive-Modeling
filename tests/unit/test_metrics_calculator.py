@@ -101,3 +101,4 @@ def test_calculate_claim_severity_missing_claims_col(capsys):
     assert result_df.empty # It will be empty as no claims are filtered
     captured = capsys.readouterr()
     assert "Error: 'TotalClaims' column missing" in captured.out
+                        
