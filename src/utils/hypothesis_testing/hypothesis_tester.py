@@ -64,43 +64,43 @@ class HypothesisTester:
         return results
 
 
-if __name__ == "__main__":
-    # Example usage for HypothesisTester
-    print("--- Testing HypothesisTester with different strategies ---")
+# if __name__ == "__main__":
+#     # Example usage for HypothesisTester
+#     print("--- Testing HypothesisTester with different strategies ---")
 
-    # Create dummy data for demonstration
-    np.random.seed(42)
-    data = {
-        'Group': ['A'] * 50 + ['B'] * 50,
-        'Numerical_Metric': np.concatenate([np.random.normal(loc=10, scale=2, size=50),
-                                            np.random.normal(loc=11, scale=2.5, size=50)]),
-        'Binary_Outcome': np.concatenate([np.random.choice([0, 1], size=50, p=[0.7, 0.3]),
-                                          np.random.choice([0, 1], size=50, p=[0.5, 0.5])])
-    }
-    df_dummy = pd.DataFrame(data)
+#     # Create dummy data for demonstration
+#     np.random.seed(42)
+#     data = {
+#         'Group': ['A'] * 50 + ['B'] * 50,
+#         'Numerical_Metric': np.concatenate([np.random.normal(loc=10, scale=2, size=50),
+#                                             np.random.normal(loc=11, scale=2.5, size=50)]),
+#         'Binary_Outcome': np.concatenate([np.random.choice([0, 1], size=50, p=[0.7, 0.3]),
+#                                           np.random.choice([0, 1], size=50, p=[0.5, 0.5])])
+#     }
+#     df_dummy = pd.DataFrame(data)
 
-    group_a_num = df_dummy[df_dummy['Group'] == 'A']['Numerical_Metric']
-    group_b_num = df_dummy[df_dummy['Group'] == 'B']['Numerical_Metric']
+#     group_a_num = df_dummy[df_dummy['Group'] == 'A']['Numerical_Metric']
+#     group_b_num = df_dummy[df_dummy['Group'] == 'B']['Numerical_Metric']
 
-    group_a_binary = df_dummy[df_dummy['Group'] == 'A']['Binary_Outcome']
-    group_b_binary = df_dummy[df_dummy['Group'] == 'B']['Binary_Outcome']
+#     group_a_binary = df_dummy[df_dummy['Group'] == 'A']['Binary_Outcome']
+#     group_b_binary = df_dummy[df_dummy['Group'] == 'B']['Binary_Outcome']
 
-    # Test with T-test strategy
-    from t_test import TTestStrategy
-    t_test_strategy = TTestStrategy()
-    tester_t = HypothesisTester(t_test_strategy)
+#     # Test with T-test strategy
+#     from t_test import TTestStrategy
+#     t_test_strategy = TTestStrategy()
+#     tester_t = HypothesisTester(t_test_strategy)
     
-    tester_t.execute_test(group_a_num, group_b_num, test_name="Numerical Metric (A vs B) - T-test")
+#     tester_t.execute_test(group_a_num, group_b_num, test_name="Numerical Metric (A vs B) - T-test")
 
-    # Test with Chi-squared strategy
-    from chi_squared_test import ChiSquaredTestStrategy
-    chi_test_strategy = ChiSquaredTestStrategy()
-    tester_chi = HypothesisTester(chi_test_strategy)
+#     # Test with Chi-squared strategy
+#     from chi_squared_test import ChiSquaredTestStrategy
+#     chi_test_strategy = ChiSquaredTestStrategy()
+#     tester_chi = HypothesisTester(chi_test_strategy)
     
-    tester_chi.execute_test(group_a_binary, group_b_binary, test_name="Binary Outcome (A vs B) - Chi-squared Test")
+#     tester_chi.execute_test(group_a_binary, group_b_binary, test_name="Binary Outcome (A vs B) - Chi-squared Test")
 
-    # Test case: Insufficient data
-    print("\n--- Testing with Insufficient Data ---")
-    tester_t.execute_test(pd.Series([]), group_b_num, test_name="T-test with empty Group A")
-    tester_chi.execute_test(group_a_binary, pd.Series([]), test_name="Chi-squared with empty Group B")
+#     # Test case: Insufficient data
+#     print("\n--- Testing with Insufficient Data ---")
+#     tester_t.execute_test(pd.Series([]), group_b_num, test_name="T-test with empty Group A")
+#     tester_chi.execute_test(group_a_binary, pd.Series([]), test_name="Chi-squared with empty Group B")
 

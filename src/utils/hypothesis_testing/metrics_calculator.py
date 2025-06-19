@@ -67,37 +67,37 @@ def calculate_margin(df: pd.DataFrame) -> pd.DataFrame:
     print("Calculated 'Margin' column.")
     return df_copy
 
-if __name__ == "__main__":
-    print("--- Testing metrics_calculator.py ---")
+# if __name__ == "__main__":
+#     print("--- Testing metrics_calculator.py ---")
 
-    # Create a dummy DataFrame for demonstration
-    dummy_data = {
-        'PolicyID': [1, 2, 3, 4, 5, 6],
-        'TotalPremium': [1000, 1200, 800, 1500, 900, 1100],
-        'TotalClaims': [500, 0, 1500, 100, np.nan, 2000] # NaN for no claim, 0 for no claim
-    }
-    df_dummy = pd.DataFrame(dummy_data)
-    print("\nOriginal Dummy DataFrame:")
-    print(df_dummy)
+#     # Create a dummy DataFrame for demonstration
+#     dummy_data = {
+#         'PolicyID': [1, 2, 3, 4, 5, 6],
+#         'TotalPremium': [1000, 1200, 800, 1500, 900, 1100],
+#         'TotalClaims': [500, 0, 1500, 100, np.nan, 2000] # NaN for no claim, 0 for no claim
+#     }
+#     df_dummy = pd.DataFrame(dummy_data)
+#     print("\nOriginal Dummy DataFrame:")
+#     print(df_dummy)
 
-    # Test calculate_claim_frequency
-    df_freq = calculate_claim_frequency(df_dummy)
-    print("\nDataFrame after calculating Claim Frequency:")
-    print(df_freq)
-    print(f"Overall Claim Frequency: {df_freq['HasClaim'].mean():.2f}")
+#     # Test calculate_claim_frequency
+#     df_freq = calculate_claim_frequency(df_dummy)
+#     print("\nDataFrame after calculating Claim Frequency:")
+#     print(df_freq)
+#     print(f"Overall Claim Frequency: {df_freq['HasClaim'].mean():.2f}")
 
-    # Test calculate_margin
-    df_margin = calculate_margin(df_dummy)
-    print("\nDataFrame after calculating Margin:")
-    print(df_margin)
-    print(f"Overall Average Margin: {df_margin['Margin'].mean():.2f}")
+#     # Test calculate_margin
+#     df_margin = calculate_margin(df_dummy)
+#     print("\nDataFrame after calculating Margin:")
+#     print(df_margin)
+#     print(f"Overall Average Margin: {df_margin['Margin'].mean():.2f}")
 
-    # Test calculate_claim_severity (conceptual usage)
-    # To get overall claim severity, first filter for claims > 0, then take mean
-    claims_only_df = df_dummy[df_dummy['TotalClaims'].fillna(0) > 0]
-    if not claims_only_df.empty:
-        overall_severity = claims_only_df['TotalClaims'].mean()
-        print(f"\nOverall Claim Severity (for policies with claims): {overall_severity:.2f}")
-    else:
-        print("\nNo claims in dummy data for severity calculation.")
+#     # Test calculate_claim_severity (conceptual usage)
+#     # To get overall claim severity, first filter for claims > 0, then take mean
+#     claims_only_df = df_dummy[df_dummy['TotalClaims'].fillna(0) > 0]
+#     if not claims_only_df.empty:
+#         overall_severity = claims_only_df['TotalClaims'].mean()
+#         print(f"\nOverall Claim Severity (for policies with claims): {overall_severity:.2f}")
+#     else:
+#         print("\nNo claims in dummy data for severity calculation.")
 
