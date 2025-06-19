@@ -1,340 +1,395 @@
 import pandas as pd
-from sklearn.preprocessing import StandardScaler, MinMaxScaler, OneHotEncoder, LabelEncoder
+from sklearn.preprocessing import LabelEncoder, StandardScaler
 from sklearn.impute import SimpleImputer
-from sklearn.compose import ColumnTransformer
-from sklearn.pipeline import Pipeline
 import numpy as np
-from pathlib import Path
-import sys
-import os
-
-# Add project root to sys.path to access data_loader if running standalone
-# This assumes data_loader is at src/utils/data_loader.py
-# If data_loader is elsewhere, adjust the path
-project_root = Path(__file__).parent.parent.parent.parent
-if str(project_root) not in sys.path:
-    sys.path.append(str(project_root))
-
-# Assuming data_loader.py is in src/utils/
-try:
-    from src.utils.data_loader import load_data
-except ImportError:
-    print("Warning: Could not import load_data from src.utils.data_loader. "
-          "Ensure src/utils/data_loader.py exists and path is correct.")
-    # Define a minimal load_data function for standalone testing if import fails
-    def load_data(file_path, delimiter=',', file_type='csv'):
-        print(f"Using fallback load_data for {file_path}")
-        if file_type == 'csv':
-            return pd.read_csv(file_path, delimiter=delimiter, low_memory=False)
-        elif file_type == 'txt':
-            return pd.read_csv(file_path, delimiter=delimiter, low_memory=False)
-        else:
-            raise ValueError("Unsupported file type for fallback loader.")
-
+import warnings # Import warnings for suppressing specific messages
+from pathlib import Path # Required for the @staticmethod load_and_clean_data and save_dataframe
 
 class DataPreprocessor:
     """
-    A modular class for comprehensive data preprocessing steps including:
-    - Initial data loading and cleaning (handling missing values, duplicates).
-    - Flexible encoding of categorical features (OneHotEncoder, LabelEncoder).
-    - Various scaling methods for numerical features (StandardScaler, MinMaxScaler, Log Transform).
-    - Imputation strategies within the preprocessing pipeline.
+    A class to preprocess DataFrame for machine learning.
+    It handles numerical imputation, scaling, and categorical encoding.
     """
+    def __init__(self, numerical_cols=None, categorical_cols=None):
+        self.numerical_cols = numerical_cols if numerical_cols is not None else []
+        self.categorical_cols = categorical_cols if categorical_cols is not None else []
+        self.imputer = None
+        self.scaler = None
+        self.encoders = {}
+        self.fitted_numerical_cols_for_imputer = [] # NEW: To store the exact columns imputer was fitted on
 
-    def __init__(self, numerical_cols: list, categorical_cols: list):
-        """
-        Initializes the DataPreprocessor with lists of numerical and categorical columns.
-
-        Args:
-            numerical_cols (list): List of column names to be treated as numerical.
-            categorical_cols (list): List of column names to be treated as categorical.
-        """
-        self.numerical_cols = numerical_cols
-        self.categorical_cols = categorical_cols
-        self.column_transformer = None # Will be built dynamically based on method calls
-        self.label_encoders = {} # Store LabelEncoders if used
-        self.fitted_preprocessor_pipeline = None
-
-
-    @staticmethod
-    def load_and_clean_data(file_path: Path, delimiter: str = ',', file_type = 'csv') -> pd.DataFrame:
-        """
-        Loads data from a CSV/TXT file, removes duplicates, and drops rows with
-        missing values in critical columns.
-
-        Args:
-            file_path (Path): The path to the data file.
-            delimiter (str): The delimiter used in the data file (e.g., ',', '|').
-            file_type (str, optional): The type of the file (e.g., 'csv', 'txt').
-                                   If None, infers from file extension.
-
-        Returns:
-            pd.DataFrame: The loaded and initially cleaned DataFrame.
-        """
-        if not file_path.exists():
-            raise FileNotFoundError(f"Data file not found at: {file_path}")
-
-        df = load_data(file_path, delimiter=delimiter, file_type=file_type)
-
-        initial_rows = df.shape[0]
-        # Remove duplicate rows
-        df.drop_duplicates(inplace=True)
-        print(f"Removed {initial_rows - df.shape[0]} duplicate rows.")
-
-        # For initial cleaning, we can drop rows where 'TotalPremium' or 'TotalClaims' are NaN
-        # (Assuming these are critical for any analysis, and not 0 for no claim)
-        # However, for this preprocessor, we'll let SimpleImputer handle NaNs in defined columns.
-        # So, the "cleaning" here is mainly duplicates.
+    def fit_imputer(self, df: pd.DataFrame):
+        """Fits the imputer on numerical columns."""
+        # Ensure only columns present in df and numerical are selected for fitting
+        cols_to_fit = [col for col in self.numerical_cols if col in df.columns and pd.api.types.is_numeric_dtype(df[col])]
         
-        # Ensure critical financial columns are numeric, filling NaNs with 0 if they represent absence of value
-        for col in ['TotalPremium', 'TotalClaims']:
-            if col in df.columns:
-                df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0) # Fill financial NaNs with 0
+        if cols_to_fit and not df[cols_to_fit].empty:
+            self.imputer = SimpleImputer(strategy='mean')
+            self.imputer.fit(df[cols_to_fit])
+            self.fitted_numerical_cols_for_imputer = cols_to_fit # Store the actual columns used for fitting
+            print(f"Imputer fitted on numerical columns: {self.fitted_numerical_cols_for_imputer}")
+        else:
+            print("No numerical columns specified or DataFrame is empty for imputer fitting. Skipping fitting.")
+            self.imputer = None # Ensure imputer is reset if not fitted
+            self.fitted_numerical_cols_for_imputer = [] # Reset fitted columns
+
+    def apply_imputation(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Applies imputation to numerical columns."""
+        df_imputed = df.copy()
+        
+        # Use the exact columns the imputer was fitted on
+        if self.imputer and self.fitted_numerical_cols_for_imputer:
+            # Check if all fitted columns are actually present in the current df_imputed
+            missing_cols_for_transform = [col for col in self.fitted_numerical_cols_for_imputer if col not in df_imputed.columns]
+            if missing_cols_for_transform:
+                print(f"Error: Missing columns in DataFrame for imputation transform: {missing_cols_for_transform}. Cannot apply imputation.")
+                return df_imputed # Return original df, cannot proceed
+
+            if not df_imputed[self.fitted_numerical_cols_for_imputer].empty:
+                # IMPORTANT: .values ensures that we pass a NumPy array, not a DataFrame
+                # This avoids potential pandas indexing quirks that lead to 'Columns must be same length as key'
+                imputed_data = self.imputer.transform(df_imputed[self.fitted_numerical_cols_for_imputer].values)
+                df_imputed[self.fitted_numerical_cols_for_imputer] = imputed_data
+                print("Numerical imputation applied.")
             else:
-                print(f"Warning: Critical column '{col}' not found during initial cleaning.")
+                print("Numerical columns for imputation are empty. Skipping imputation.")
+        else:
+            print("Imputer not fitted or no numerical columns to impute. Skipping imputation.")
+        return df_imputed
 
-        print(f"Data loaded and duplicates removed. Current shape: {df.shape}")
-        return df
+    def fit_scaler(self, df: pd.DataFrame, scaler_type='standard'):
+        """Fits the scaler on numerical columns."""
+        if self.numerical_cols and not df[self.numerical_cols].empty:
+            if scaler_type == 'standard':
+                self.scaler = StandardScaler()
+            # Add other scaler types here if needed (e.g., MinMaxScaler)
+            
+            if self.scaler:
+                self.scaler.fit(df[self.numerical_cols])
+                print(f"{scaler_type.capitalize()} scaler fitted on numerical columns: {self.numerical_cols}")
+            else:
+                print(f"Scaler type '{scaler_type}' not recognized. Skipping scaler fitting.")
+        else:
+            print("No numerical columns specified or DataFrame is empty for scaler fitting.")
 
-    def apply_encoding(self, df: pd.DataFrame, encoder_type: str = 'onehot') -> pd.DataFrame:
-        """
-        Applies encoding to categorical columns. Supports 'onehot' and 'label' encoding.
-
-        Args:
-            df (pd.DataFrame): The input DataFrame.
-            encoder_type (str): Type of encoder to use ('onehot' or 'label').
-
-        Returns:
-            pd.DataFrame: DataFrame with encoded categorical features.
-        """
+    def apply_scaling(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Applies scaling to numerical columns."""
+        df_scaled = df.copy()
+        if self.scaler and self.numerical_cols and not df_scaled[self.numerical_cols].empty:
+            df_scaled[self.numerical_cols] = self.scaler.transform(df_scaled[self.numerical_cols])
+            print("Numerical scaling applied.")
+        elif self.numerical_cols and df_scaled[self.numerical_cols].empty:
+            print("Warning: Numerical columns for scaling are empty. Skipping scaling.")
+        else:
+            print("Scaler not fitted or no numerical columns specified. Skipping scaling.")
+        return df_scaled
+        
+    def apply_encoding(self, df: pd.DataFrame, encoder_type='label') -> pd.DataFrame:
+        """Applies encoding to categorical columns."""
         df_encoded = df.copy()
-        if not self.categorical_cols:
-            print("No categorical columns specified for encoding.")
+        cols_to_encode = [col for col in self.categorical_cols if col in df_encoded.columns]
+
+        if not cols_to_encode:
+            print("No categorical columns specified or found for encoding. Skipping encoding.")
             return df_encoded
 
-        if encoder_type == 'onehot':
-            print("Applying One-Hot Encoding to categorical features...")
-            # For one-hot encoding, we build a ColumnTransformer sub-pipeline
-            categorical_pipeline = Pipeline([
-                ('imputer', SimpleImputer(strategy='most_frequent')),
-                ('onehot', OneHotEncoder(handle_unknown='ignore', sparse_output=False))
-            ])
-            
-            # Use ColumnTransformer for one-hot encoding to handle multiple columns efficiently
-            onehot_preprocessor = ColumnTransformer(
-                transformers=[
-                    ('cat_onehot', categorical_pipeline, self.categorical_cols)
-                ],
-                remainder='passthrough'
-            )
-            
-            # Fit and transform
-            transformed_array = onehot_preprocessor.fit_transform(df_encoded)
-            
-            # Get feature names after one-hot encoding
-            ohe_feature_names = onehot_preprocessor.named_transformers_['cat_onehot']['onehot'].get_feature_names_out(self.categorical_cols)
-            
-            # Reconstruct DataFrame with new column names
-            # Need to get names of passthrough columns too
-            passthrough_cols = [col for col in df_encoded.columns if col not in self.categorical_cols]
-            
-            # Order of columns from ColumnTransformer: transformed, then passthrough
-            df_encoded = pd.DataFrame(transformed_array, columns=list(ohe_feature_names) + passthrough_cols, index=df_encoded.index)
-            print("One-Hot Encoding complete.")
-
-        elif encoder_type == 'label':
+        if encoder_type == 'label':
             print("Applying Label Encoding to categorical features...")
-            for col in self.categorical_cols:
-                if col in df_encoded.columns:
-                    # Handle potential NaNs before LabelEncoding, as LabelEncoder doesn't support them
-                    df_encoded[col] = df_encoded[col].fillna('Missing').astype(str) # Impute with 'Missing' string
-                    le = LabelEncoder()
-                    df_encoded[col] = le.fit_transform(df_encoded[col])
-                    self.label_encoders[col] = le # Store encoder for inverse_transform if needed
-                else:
-                    print(f"Warning: Categorical column '{col}' not found for Label Encoding.")
-            print("Label Encoding complete.")
+            for col in cols_to_encode:
+                le = LabelEncoder()
+                df_encoded[col] = le.fit_transform(df_encoded[col].astype(str))
+                self.encoders[col] = le
+            print("Label Encoding applied.")
+        elif encoder_type == 'onehot':
+            print("Applying One-Hot Encoding to categorical features...")
+            df_encoded[cols_to_encode] = df_encoded[cols_to_encode].astype(str)
+            df_encoded = pd.get_dummies(df_encoded, columns=cols_to_encode, dummy_na=False)
+            print("One-Hot Encoding applied.")
         else:
-            raise ValueError(f"Unsupported encoder_type: {encoder_type}. Choose 'onehot' or 'label'.")
-
+            print(f"Encoder type '{encoder_type}' not recognized. Skipping encoding.")
+        
         return df_encoded
 
-    def apply_scaling(self, df: pd.DataFrame, scaler_type: str = 'standard') -> pd.DataFrame:
+
+    def preprocess(self, df: pd.DataFrame, encoder_type='label', scaler_type='standard') -> pd.DataFrame:
         """
-        Applies scaling/transformation to numerical columns. Supports 'standard', 'minmax', 'log', 'none'.
-
-        Args:
-            df (pd.DataFrame): The input DataFrame.
-            scaler_type (str): Type of scaler/transformer to use ('standard', 'minmax', 'log', 'none').
-
-        Returns:
-            pd.DataFrame: DataFrame with scaled/transformed numerical features.
-        """
-        df_scaled = df.copy()
-        if not self.numerical_cols:
-            print("No numerical columns specified for scaling.")
-            return df_scaled
-
-        # Filter numerical columns to only include those present in the current DataFrame
-        cols_to_scale = [col for col in self.numerical_cols if col in df_scaled.columns]
-        if not cols_to_scale:
-            print("No existing numerical columns to scale.")
-            return df_scaled
-
-        if scaler_type == 'log':
-            print("Applying Log Transformation to numerical features...")
-            for col in cols_to_scale:
-                # Add a small constant to avoid log(0) or log(negative)
-                df_scaled[col] = np.log1p(df_scaled[col].fillna(0)) # log1p handles x=0 gracefully, fill NaNs with 0
-                # Re-check for inf/-inf after log transform (e.g. if original was negative and log applied)
-                df_scaled[col].replace([np.inf, -np.inf], np.nan, inplace=True)
-                df_scaled[col].fillna(df_scaled[col].mean(), inplace=True) # Impute any new NaNs from log transform
-            print("Log Transformation complete.")
-            # If log is applied, subsequent scaling might be redundant or undesirable,
-            # but we allow it as a sequence. For simplicity, we just apply log and return.
-            return df_scaled # Log transform usually replaces scaling, so return here
-
-        # For Standard and MinMaxScaler, we use a ColumnTransformer for robustness
-        numerical_pipeline_steps = []
-        # Impute numerical NaNs before scaling
-        numerical_pipeline_steps.append(('imputer', SimpleImputer(strategy='mean'))) # Default numerical imputation
-
-        if scaler_type == 'standard':
-            print("Applying Standard Scaling to numerical features...")
-            numerical_pipeline_steps.append(('scaler', StandardScaler()))
-        elif scaler_type == 'minmax':
-            print("Applying Min-Max Scaling to numerical features...")
-            numerical_pipeline_steps.append(('scaler', MinMaxScaler()))
-        elif scaler_type == 'none':
-            print("Skipping numerical scaling.")
-            return df_scaled # No scaling needed, return original
-        else:
-            raise ValueError(f"Unsupported scaler_type: {scaler_type}. Choose 'standard', 'minmax', or 'log'.")
-
-        numerical_transformer = Pipeline(numerical_pipeline_steps)
-
-        # Create ColumnTransformer to apply numerical pipeline only to specified columns
-        scaling_preprocessor = ColumnTransformer(
-            transformers=[
-                ('num_scaler', numerical_transformer, cols_to_scale)
-            ],
-            remainder='passthrough' # Keep other columns as is
-        )
+        Performs a full preprocessing pipeline: imputation, encoding, and scaling.
+        This method assumes initial data preparation (type conversions, dropping infinities)
+        has already been done via `apply_initial_data_preparation`.
         
-        # Fit and transform
-        transformed_array = scaling_preprocessor.fit_transform(df_scaled)
-
-        # Reconstruct DataFrame with original column names (for transformed numerical) and passthrough
-        transformed_columns = list(scaling_preprocessor.named_transformers_['num_scaler'].named_steps['scaler'].get_feature_names_out(cols_to_scale))
-        passthrough_cols = [col for col in df_scaled.columns if col not in cols_to_scale]
-
-        df_scaled = pd.DataFrame(transformed_array, columns=transformed_columns + passthrough_cols, index=df_scaled.index)
-        print(f"{scaler_type} Scaling complete.")
-
-        return df_scaled
-
-    def preprocess(self, df: pd.DataFrame, encoder_type: str = 'onehot', scaler_type: str = 'standard') -> pd.DataFrame:
-        """
-        Orchestrates the full preprocessing pipeline:
-        1. Applies encoding to categorical features.
-        2. Applies scaling/transformation to numerical features.
-
         Args:
             df (pd.DataFrame): The input DataFrame.
-            encoder_type (str): Type of encoder for categorical features ('onehot' or 'label').
-            scaler_type (str): Type of scaler for numerical features ('standard', 'minmax', 'log', 'none').
+            encoder_type (str): Type of encoder ('label' or 'onehot').
+            scaler_type (str): Type of scaler ('standard').
 
         Returns:
             pd.DataFrame: The fully preprocessed DataFrame.
         """
+        if df.empty:
+            print("Input DataFrame is empty. Skipping preprocessing pipeline.")
+            return df
+
         print(f"\n--- Starting Full Preprocessing (Encoder: {encoder_type}, Scaler: {scaler_type}) ---")
 
-        # Step 1: Apply encoding
+        # Step 1: Apply encoding to categorical features
         df_temp = self.apply_encoding(df.copy(), encoder_type=encoder_type)
-        
-        # Step 2: Apply scaling/transformation
-        # Ensure only the numerical columns that are still present after encoding are passed
-        # This is crucial if encoding adds/removes columns or changes types.
-        current_numerical_cols = [col for col in self.numerical_cols if col in df_temp.columns and pd.api.types.is_numeric_dtype(df_temp[col])]
-        
-        # Temporarily update self.numerical_cols for the scaling method to use the current set
-        original_numerical_cols = self.numerical_cols
-        self.numerical_cols = current_numerical_cols
-        df_processed = self.apply_scaling(df_temp, scaler_type=scaler_type)
-        self.numerical_cols = original_numerical_cols # Restore original list
+        if df_temp.empty:
+            print("Warning: DataFrame became empty after encoding. Skipping scaling.")
+            return df_temp
 
-        print("--- Full Preprocessing Complete ---")
+        # Step 2: Impute numerical features BEFORE scaling
+        for col in self.numerical_cols:
+            if col in df_temp.columns:
+                df_temp[col] = pd.to_numeric(df_temp[col], errors='coerce') # Ensure numeric after encoding/before imputation
+        
+        if self.numerical_cols:
+            nans_in_numerical = df_temp[self.numerical_cols].isnull().any().any()
+            if nans_in_numerical:
+                self.fit_imputer(df_temp) # Fit on the current df_temp state
+                df_temp = self.apply_imputation(df_temp)
+            else:
+                print("No NaNs in specified numerical columns, skipping imputation.")
+        else:
+            print("No numerical columns specified for imputation.")
+
+
+        # Step 3: Apply scaling
+        for col in self.numerical_cols:
+            if col in df_temp.columns:
+                df_temp[col] = pd.to_numeric(df_temp[col], errors='coerce') # Re-ensure numeric after imputation/before scaling
+
+        if self.numerical_cols and not df_temp[self.numerical_cols].empty:
+            # Check if there's any variance to scale. If all values are constant, StandardScaler will warn/error.
+            if df_temp[self.numerical_cols].nunique().sum() > len(self.numerical_cols):
+                self.fit_scaler(df_temp, scaler_type=scaler_type)
+                df_processed = self.apply_scaling(df_temp)
+            else:
+                print("Numerical columns have no variance for scaling. Skipping scaling.")
+                df_processed = df_temp
+        elif self.numerical_cols:
+            print("Numerical columns are empty or not specified for scaling. Skipping scaling.")
+            df_processed = df_temp
+        else:
+            print("No numerical columns specified for scaling. Skipping scaling.")
+            df_processed = df_temp
+
+        print("Full preprocessing pipeline completed.")
         return df_processed
-
-
-# Example usage (for standalone testing and demonstration)
-if __name__ == "__main__":
-    print("--- Testing DataPreprocessor with Actual Data ---")
-
-    # Define path to the actual processed data file
-    processed_data_path = project_root / "data" / "processed" / "processed_insurance_data.csv"
     
-    # Load and initially clean the data (removing duplicates and handling critical NaNs)
-    df = DataPreprocessor.load_and_clean_data(processed_data_path, delimiter=',')
+    @staticmethod
+    def load_and_clean_data(file_path: Path, delimiter: str = ',', file_type: str = 'csv') -> pd.DataFrame:
+        """
+        Loads data from a specified file path and performs initial cleaning.
+        Includes handling duplicate rows and filling critical NaNs in TotalPremium/TotalClaims.
+        """
+        if not file_path.is_file():
+            print(f"Error: File not found at {file_path}")
+            return pd.DataFrame()
 
-    if not df.empty:
-        # Pre-convert TransactionMonth to datetime if it's needed for other feature engineering
-        # This step is outside the preprocessor's methods but part of general data prep flow.
-        if 'TransactionMonth' in df.columns:
-            df['TransactionMonth'] = pd.to_datetime(df['TransactionMonth'], format='%Y%m', errors='coerce')
+        try:
+            if file_type == 'csv':
+                df = pd.read_csv(file_path, sep=delimiter)
+            elif file_type == 'txt':
+                try:
+                    df = pd.read_csv(file_path, sep=delimiter, engine='python')
+                except pd.errors.ParserError:
+                    try:
+                        df = pd.read_csv(file_path, sep='\t', engine='python')
+                    except pd.errors.ParserError:
+                        df = pd.read_csv(file_path, sep=r'\s+', engine='python')
+            else:
+                print(f"Error: Unsupported file type '{file_type}'. Only 'csv' and 'txt' are supported.")
+                return pd.DataFrame()
+
+            print(f"Successfully loaded data from {file_path}. Initial shape: {df.shape}")
+
+            initial_rows = df.shape[0]
+            df.drop_duplicates(inplace=True)
+            rows_after_dedup = df.shape[0]
+            if initial_rows > rows_after_dedup:
+                print(f"Removed {initial_rows - rows_after_dedup} duplicate rows.")
+
+            for col in ['TotalPremium', 'TotalClaims']:
+                if col in df.columns:
+                    # Convert to numeric, coercing errors to NaN, then fill NaNs with 0
+                    df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
+                    # Explicitly replace any remaining np.inf or -np.inf with 0 for these critical columns
+                    df[col].replace([np.inf, -np.inf], 0, inplace=True) 
+                    if df[col].isnull().any(): # Check again after filling with 0, in case of all NaN column
+                        print(f"Warning: After filling with 0, '{col}' still has {df[col].isnull().sum()} NaNs. This indicates column might be entirely non-numeric.")
+                else:
+                    print(f"Warning: Critical column '{col}' not found for initial NaN handling.")
+
+            return df
+        except Exception as e:
+            print(f"Error loading or initially cleaning data from {file_path}: {e}")
+            return pd.DataFrame()
+
+    @staticmethod
+    def save_dataframe(df: pd.DataFrame, file_path: Path, index=False):
+        """Saves a DataFrame to a specified CSV file path."""
+        try:
+            df.to_csv(file_path, index=index)
+            print(f"DataFrame successfully saved to {file_path}")
+        except Exception as e:
+            print(f"Error saving DataFrame to {file_path}: {e}")
+
+    @staticmethod
+    def reduce_high_cardinality_features(df: pd.DataFrame, 
+                                        categorical_cols_to_reduce: list = None,
+                                        postal_code_col: str = None,
+                                        max_unique_categories_for_ohe: int = 50,
+                                        other_threshold_ratio: float = 0.01):
+        """
+        Reduces cardinality of specified categorical features.
+        """
+        df_reduced = df.copy()
+
+        if categorical_cols_to_reduce is None:
+            categorical_cols_to_reduce = []
         
-        # Define numerical and categorical columns for preprocessing
-        # These are features we intend to use in a model
-        numerical_cols_for_model = ['TotalPremium', 'TotalClaims', 'CustomValueEstimate', 'RegistrationYear', 'Cylinders']
-        categorical_cols_for_model = ['Gender', 'Province', 'VehicleType', 'IsVATRegistered']
+        print("\nApplying cardinality reduction...")
 
-        # Ensure all columns exist in the DataFrame before passing to Preprocessor
-        numerical_cols_for_model = [col for col in numerical_cols_for_model if col in df.columns]
-        categorical_cols_for_model = [col for col in categorical_cols_for_model if col in df.columns]
+        if postal_code_col and postal_code_col in df_reduced.columns:
+            if df_reduced[postal_code_col].dtype == 'object' or pd.api.types.is_numeric_dtype(df_reduced[postal_code_col]):
+                df_reduced[postal_code_col] = df_reduced[postal_code_col].astype(str).str[:3]
+                df_reduced[postal_code_col] = df_reduced[postal_code_col].astype('category')
+                print(f"  Truncated '{postal_code_col}' to first 3 digits and converted to category.")
+            else:
+                print(f"  Skipping truncation for '{postal_code_col}': not a string or numeric type.")
 
-        # --- Demonstration 1: One-Hot Encoding + Standard Scaling ---
-        print("\n=== Demo 1: One-Hot Encoding + Standard Scaling ===")
-        preprocessor_ohe_standard = DataPreprocessor(
-            numerical_cols=numerical_cols_for_model,
-            categorical_cols=categorical_cols_for_model
-        )
-        df_processed_ohe_standard = preprocessor_ohe_standard.preprocess(df.copy(), encoder_type='onehot', scaler_type='standard')
-        print("\nProcessed DataFrame (One-Hot + Standard) Head:")
-        print(df_processed_ohe_standard.head())
-        print("\nProcessed DataFrame (One-Hot + Standard) Info:")
-        df_processed_ohe_standard.info()
+        for col in categorical_cols_to_reduce:
+            if col in df_reduced.columns and (pd.api.types.is_categorical_dtype(df_reduced[col]) or df_reduced[col].dtype == 'object'):
+                temp_series = df_reduced[col].astype(str)
+                value_counts = temp_series.value_counts(normalize=True)
+                
+                rare_categories = value_counts[value_counts < other_threshold_ratio].index
+                
+                if not rare_categories.empty:
+                    df_reduced[col] = temp_series.replace(rare_categories, 'Other_Category').astype('category')
+                    print(f"  Grouped {len(rare_categories)} rare categories in '{col}' into 'Other_Category'. New unique count: {df_reduced[col].nunique()}")
+                else:
+                    print(f"  No rare categories to group in '{col}'.")
+            elif col in df_reduced.columns:
+                print(f"  Skipping grouping for '{col}': not a categorical or object type.")
+            else:
+                print(f"  Column '{col}' not found for cardinality reduction.")
 
-        # --- Demonstration 2: Label Encoding + Min-Max Scaling ---
-        # Note: Label Encoding is usually for ordinal features or target variables.
-        # For nominal features like 'Gender' or 'Province', One-Hot is generally preferred
-        # to avoid implying an arbitrary order. This demo is for functional completeness.
-        print("\n=== Demo 2: Label Encoding + Min-Max Scaling ===")
-        preprocessor_le_minmax = DataPreprocessor(
-            numerical_cols=numerical_cols_for_model,
-            categorical_cols=categorical_cols_for_model
-        )
-        # Apply label encoding first as a separate step if not using ColumnTransformer for it
-        df_encoded_le = preprocessor_le_minmax.apply_encoding(df.copy(), encoder_type='label')
-        df_processed_le_minmax = preprocessor_le_minmax.apply_scaling(df_encoded_le, scaler_type='minmax')
+        print("Cardinality reduction complete.")
+        return df_reduced
 
-        print("\nProcessed DataFrame (Label + Min-Max) Head:")
-        print(df_processed_le_minmax.head())
-        print("\nProcessed DataFrame (Label + Min-Max) Info:")
-        df_processed_le_minmax.info()
+    @staticmethod
+    def apply_initial_data_preparation(df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Performs initial data preparation steps including:
+        1. Correcting data types for known numerical and boolean-like columns.
+           This step also explicitly DROPS rows containing np.inf or -np.inf in these columns.
+        2. Converts remaining 'object' columns to 'category' dtype.
+        
+        Note: This method no longer performs general dropping of rows with NaNs.
+              NaNs (from missing values or coercion from non-numeric strings) will be handled
+              by the imputer in the `preprocess` method.
+              'TransactionMonth' conversion is skipped as it will be dropped later.
+        
+        Args:
+            df (pd.DataFrame): The input DataFrame.
+            
+        Returns:
+            pd.DataFrame: The DataFrame after initial data preparation.
+                          Returns an empty DataFrame if it becomes empty after dropping infinities.
+        """
+        df_prepared = df.copy()
 
-        # --- Demonstration 3: Log Transformation + No further scaling ---
-        print("\n=== Demo 3: Log Transformation + No further scaling ===")
-        preprocessor_log = DataPreprocessor(
-            numerical_cols=numerical_cols_for_model,
-            categorical_cols=categorical_cols_for_model # Categorical will still be one-hot encoded by default
-        )
-        df_processed_log = preprocessor_log.preprocess(df.copy(), encoder_type='onehot', scaler_type='log')
-        print("\nProcessed DataFrame (One-Hot + Log) Head:")
-        print(df_processed_log.head())
-        print("\nProcessed DataFrame (One-Hot + Log) Info:")
-        df_processed_log.info()
+        if df_prepared.empty:
+            print("Input DataFrame is empty for initial data preparation. Returning empty DataFrame.")
+            return df_prepared
 
-    else:
-        print("DataFrame is empty after loading and initial cleaning. Skipping preprocessor demonstrations.")
+        print("\n--- Performing Initial Data Preparation (Type Conversions, Dropping Infinities, No General NaN Dropping or Date Conversion) ---")
 
-    print("\nDataPreprocessor demonstrations complete.")
+        # Skip TransactionMonth date conversion as requested.
+        if 'TransactionMonth' in df_prepared.columns:
+            print("  Skipping 'TransactionMonth' date conversion as requested. It will retain its original dtype.")
+
+        cols_to_force_numeric = [
+            'RegistrationYear', 'Cylinders', 'Cubiccapacity', 'Kilowatts',
+            'NumberOfDoors', 'CustomValueEstimate', 'CapitalOutstanding',
+            'SumInsured', 'CalculatedPremiumPerTerm', 'Mmcode',
+            'NumberOfVehiclesInFleet', 'TermFrequency', 'ExcessSelected',
+            'ClaimPremiumRatio', 'VehicleAge'
+        ]
+        
+        # 1. Correcting data types for known numerical columns (including coercing errors to NaN)
+        print("\n  Explicitly Converting Object/Mixed Dtypes to Numerical (Comprehensive) ---")
+        for col in cols_to_force_numeric:
+            if col in df_prepared.columns:
+                # Special handling for RegistrationYear if it has 'MM/YYYY' format strings
+                if col == 'RegistrationYear' and df_prepared[col].dtype == 'object':
+                    print(f"    Attempting to parse '{col}' (object dtype) for 'MM/YYYY' format to extract year...")
+                    try:
+                        df_prepared[col] = pd.to_datetime(df_prepared[col], format='%m/%Y', errors='coerce').dt.year
+                        df_prepared[col] = pd.to_numeric(df_prepared[col], errors='coerce') # Ensure purely numeric year, convert remaining errors
+                    except Exception as e:
+                        print(f"    Warning: Specific MM/YYYY parsing for '{col}' failed: {e}. Falling back to general numeric conversion.")
+                        df_prepared[col] = pd.to_numeric(df_prepared[col], errors='coerce')
+                else:
+                    # General numeric conversion. 'errors='coerce' will turn non-numeric values
+                    # (including string "inf", "-inf") to NaN.
+                    df_prepared[col] = pd.to_numeric(df_prepared[col], errors='coerce')
+                
+                print(f"    Converted '{col}' to numeric. Current dtype: {df_prepared[col].dtype}. NaNs: {df_prepared[col].isnull().sum()}.")
+            else:
+                print(f"    Column '{col}' not found for comprehensive numeric conversion.")
+
+        # --- NEW: Drop rows containing actual np.inf or -np.inf in numerical columns ---
+        # This step is done *after* pd.to_numeric conversions have had a chance to run.
+        # It targets any `np.inf` or `-np.inf` values that might still exist (not converted to NaN by coerce).
+        
+        initial_rows_before_inf_drop = df_prepared.shape[0]
+        # Get numerical columns from the DataFrame *after* attempted conversions
+        numeric_cols_in_df = df_prepared.select_dtypes(include=np.number).columns
+        
+        if not numeric_cols_in_df.empty:
+            # Create a boolean mask for rows containing any infinity in any numeric column
+            rows_with_infinity_mask = df_prepared[numeric_cols_in_df].isin([np.inf, -np.inf]).any(axis=1)
+            
+            if rows_with_infinity_mask.any():
+                df_prepared = df_prepared[~rows_with_infinity_mask].copy()
+                dropped_count = initial_rows_before_inf_drop - df_prepared.shape[0]
+                print(f"  Dropped {dropped_count} rows containing infinite numerical values after type conversions.")
+                if df_prepared.empty:
+                    print("Warning: DataFrame became empty after dropping infinite values. Subsequent steps may not function correctly with an empty DataFrame.")
+                    return df_prepared # Return early if empty
+            else:
+                print("  No infinite values detected in numerical columns after type conversions. No rows dropped for infinities.")
+        else:
+            print("  No numerical columns to check for infinities. Skipping infinity drop.")
+        # --- END NEW: Drop rows containing actual np.inf or -np.inf ---
+
+        # Explicitly convert boolean-like object columns to int (0/1)
+        bool_cols_to_int = ['IsVATRegistered', 'AlarmImmobiliser', 'TrackingDevice', 'NewVehicle', 'WrittenOff', 'Rebuilt', 'Converted', 'CrossBorder']
+        for col in bool_cols_to_int:
+            if col in df_prepared.columns and df_prepared[col].dtype == 'object':
+                df_prepared[col] = df_prepared[col].astype(str).str.lower().map({'true': 1, 'false': 0}).fillna(-1).astype(int) 
+                print(f"    Converted '{col}' (bool-like object) to int. Current dtype: {df_prepared[col].dtype}. NaNs: {df_prepared[col].isnull().sum()}")
+            else:
+                print(f"    Column '{col}' not found or already numeric/boolean.")
+
+        print("\n  DataFrame Info after comprehensive explicit type conversion (numerical/boolean) and dropping infinities:")
+        df_prepared.info()
+
+        # 2. Convert all remaining 'object' columns to 'category' dtype
+        print("\n  Converting remaining 'object' columns to 'category' dtype ---")
+        object_cols_after_numeric_conversion = df_prepared.select_dtypes(include=['object']).columns.tolist()
+        for col in object_cols_after_numeric_conversion:
+            if col not in ['UnderwrittenCoverID', 'PolicyID']: # 'mmcode' should already be handled as numeric
+                df_prepared[col] = df_prepared[col].astype('category')
+                print(f"    Converted '{col}' to category. Current dtype: {df_prepared[col].dtype}")
+            else:
+                print(f"    Skipping '{col}' (ID) from category conversion.")
+        
+        print("\n  DataFrame Info after converting objects to category:")
+        df_prepared.info()
+
+        print("\nInitial data preparation completed.")
+        return df_prepared
+
