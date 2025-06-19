@@ -1,110 +1,146 @@
-# Insurance Risk Analytics and Predictive Modeling
+# **Insurance-Risk-Analytics-And-Predictive-Modeling**
 
-## Project Description
+## **Project Description**
 
-This project focuses on analyzing and modeling historical car insurance data to support **risk segmentation**, **claim prediction**, and **premium optimization**. It leverages data engineering, statistical analysis, and machine learning techniques to help identify low-risk customer segments and improve pricing strategies for insurance providers.
+This project focuses on an end-to-end insurance risk analytics and predictive modeling solution for **AlphaCare Insurance Solutions (ACIS)** in South Africa. As a marketing analytics engineer, the primary objective is to transform traditional pricing models into a dynamic, risk-based system by leveraging data-driven insights.
 
-Key features include:
+The project encompasses three key phases:
 
-* Exploratory data analysis and risk profiling by geography, vehicle type, and customer demographics
-* A/B hypothesis testing for statistically validating risk drivers
-* Machine learning models to predict claim severity and premium amounts
-* Model interpretability using SHAP and LIME to support transparent decision-making
-* Reproducible pipeline using Git, GitHub Actions (CI/CD), and Data Version Control (DVC)
+1. **Exploratory Data Analysis (EDA):** A thorough investigation into ACIS's historical car insurance claim data to understand data quality, distributions, temporal trends, and segment-wise profitability. This phase lays the foundation for all subsequent analytical steps.
+2. **A/B Hypothesis Testing:** Statistical validation of key business assumptions about risk drivers and profit margins across different segments (e.g., provinces, zip codes, demographics). This phase provides data-backed evidence for refining segmentation strategies.
+3. **Predictive Modeling for Risk and Premium Optimization:** Development and evaluation of machine learning models to:
+    - **Predict Claim Severity:** Forecast the financial cost of a claim if it occurs.
+    - **Predict Claim Probability:** Determine the likelihood of a policy resulting in a claim.
+    - **Direct Premium Prediction:** Optimize the calculation of appropriate premiums.
 
+By integrating advanced analytics with business objectives, this project aims to identify low-risk customer segments, optimize marketing strategies, reduce premiums where appropriate, attract new clients, and ultimately enhance ACIS's profitability and competitive advantage.
 
-## Table of Contents
+## **Table of Contents**
 
-* [Installation](#installation)
-* [Usage](#usage)
-* [Project Structure](#project-structure)
-* [Contributing](#contributing)
-* [License](#license)
+- [Installation](#installation)
+- [Usage](#usage)
+- [Project Structure](#project-structure)
+- [Contributing](#contributing)
+- [License](#license)
 
+## **Installation**
 
-## Installation
+### **Prerequisites**
 
-### Prerequisites
+- Python 3.8+ (recommended)
+- Git
 
-* Python 3.8+
-* Git
-
-### Steps
+### **Steps**
 
 1. **Clone the repository:**
-
-   ```bash
-   git clone https://github.com/michaWorku/Insurance-Risk-Analytics-and-Predictive-Modeling.git
-   cd Insurance-Risk-Analytics-and-Predictive-Modeling
-   ```
-
+    
+    ```
+    git clone https://github.com/your-username/Insurance-Risk-Analytics-and-Predictive-Modeling.git # Update with your actual repo URL
+    cd Insurance-Risk-Analytics-and-Predictive-Modeling
+    
+    ```
+    
+    If you created the project in the current directory:
+    
+    ```
+    # Already in the project root
+    
+    ```
+    
 2. **Create and activate a virtual environment:**
-
-   ```bash
-   python3 -m venv venv
-   source venv/bin/activate  # On Windows: .\venv\Scripts\activate
-   ```
-
+    
+    ```
+    python3 -m venv venv
+    source venv/bin/activate # On Windows: .\venv\Scripts\activate
+    
+    ```
+    
 3. **Install dependencies:**
+    
+    ```
+    pip install -r requirements.txt
+    
+    ```
+    
 
-   ```bash
-   pip install -r requirements.txt
-   ```
+## **Usage**
 
+This project is primarily driven through Jupyter notebooks located in the `notebooks/` directory, which execute the modular Python scripts in `src/`. Follow the notebooks in sequential order for a comprehensive understanding and reproduction of the analysis:
 
-## Usage
+1. **Run EDA Notebook:**
+    - Navigate to the `notebooks/` directory.
+    - Open `EDA.ipynb` to perform exploratory data analysis, data quality checks, and initial summarization.
+    - Execute all cells in the notebook. This will also preprocess and save the data to `data/processed/`.
+    
+    ```
+    # From project root:
+    # jupyter notebook notebooks/EDA.ipynb
+    
+    ```
+    
+2. **Run Hypothesis Testing Notebook:**
+    - Ensure `EDA.ipynb` has been run first to generate the processed data.
+    - Open `Hypothesis_Testing.ipynb` to conduct A/B hypothesis tests on key risk drivers and profit margins.
+    - Execute all cells.
+    
+    ```
+    # From project root:
+    # jupyter notebook notebooks/Hypothesis_Testing.ipynb
+    
+    ```
+    
+3. **Run Predictive Modeling Notebook:**
+    - Ensure `EDA.ipynb` has been run first.
+    - Open `Predictive_Modeling.ipynb` to build, train, evaluate, and interpret machine learning models for claim severity, claim probability, and premium prediction.
+    - Execute all cells.
+    
+    ```
+    # From project root:
+    # jupyter notebook notebooks/Predictive_Modeling.ipynb
+    
+    ```
+    
 
-To run the main analytics or modeling workflows:
+For deeper insights, explore the `src/` directory which contains the modularized Python code for data loading, preprocessing, analysis strategies, and model implementations.
 
-```bash
-# Example: Running a data preparation or model training script
-python src/main.py
+## **Project Structure**
+
 ```
-
-To launch exploratory notebooks or visualizations:
-
-```bash
-jupyter notebook notebooks/
-```
-
-
-## Project Structure
-
-```bash
+.
 ├── .vscode/                 # VSCode specific settings
-├── .github/                 # GitHub Workflows (CI/CD)
+├── .github/                 # GitHub specific configurations (e.g., Workflows)
 │   └── workflows/
-│       └── unittests.yml    # CI pipeline: linting, testing
-├── .gitignore               # Files/folders to ignore in Git
-├── requirements.txt         # Python dependency list
-├── pyproject.toml           # Python packaging and formatting
-├── README.md                # This file
-├── Makefile                 # Dev task automation (optional)
-├── .env                     # Local environment config (ignored by Git)
-├── src/                     # Main source code
-│   ├── core/                # Core logic modules
-│   ├── models/              # ML/statistical models
-│   ├── utils/               # Helper functions
-│   └── services/            # Feature and pipeline services
-├── tests/                   # Unit & integration tests
-│   ├── unit/
-│   └── integration/
-├── notebooks/               # EDA, hypothesis testing, modeling notebooks
-├── scripts/                 # Automation scripts (data download, preprocessing, etc.)
-├── docs/                    # Documentation and reference materials
-├── data/                    # DVC-tracked data
-│   ├── raw/                 # Original source data
-│   └── processed/           # Cleaned and engineered datasets
-├── config/                  # YAML or JSON configuration files
-└── examples/                # Example usages and demos
+│       └── unittests.yml    # CI/CD workflow for tests and linting
+├── .gitignore               # Specifies intentionally untracked files to ignore
+├── requirements.txt         # Python dependencies
+├── pyproject.toml           # Modern Python packaging configuration (PEP 517/621)
+├── README.md                # Project overview, installation, usage
+├── Makefile                 # Common development tasks (setup, test, lint, clean)
+├── .env                     # Environment variables (e.g., API keys - kept out of Git)
+├── src/                     # Core source code for the project
+│   ├── __init__.py
+│   ├── core/                # Core logic/components
+│   ├── models/              # Data models, ORM definitions, ML models
+│   ├── utils/              # Utility functions, helper classes
+│   └── services/            # Business logic, service layer
+├── tests/                   # Test suite (unit, integration)
+│   ├── unit/                # Unit tests for individual components
+│   └── integration/         # Integration tests for combined components
+├── notebooks/               # Jupyter notebooks for experimentation, EDA, prototyping
+├── scripts/                 # Standalone utility scripts (e.g., data processing, deployment)
+├── docs/                    # Project documentation (e.g., Sphinx docs)
+├── data/                    # Data storage (raw, processed)
+│   ├── raw/                 # Original, immutable raw data
+│   └── processed/           # Cleaned, transformed, or feature-engineered data
+├── config/                  # Configuration files
+└── examples/                # Example usage of the project components
+
 ```
 
+## **Contributing**
 
-## Contributing
+Guidelines for contributing to the project.
 
-Contributions are welcome! Please fork the repository, create a feature branch, and submit a pull request with clear documentation and commits.
+## **License**
 
-
-Contributions are welcome! Please fork the repository, create a feature branch, and submit a pull request with clear documentation and commits.
-
-This project is licensed under the [MIT License](LICENSE).
+This project is licensed under the [MIT License](https://gemini.google.com/app/LICENSE). (Create a LICENSE file if you want to use MIT)

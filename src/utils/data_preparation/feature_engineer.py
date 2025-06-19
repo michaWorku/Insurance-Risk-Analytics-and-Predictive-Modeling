@@ -153,47 +153,47 @@ def create_vehicle_age_feature(df: pd.DataFrame, current_year: int = 2025) -> pd
         print("Warning: 'RegistrationYear' not found or not numerical. Skipping 'VehicleAge' creation.")
     return df_copy
 
-# Example usage (for standalone testing)
-if __name__ == "__main__":
-    print("--- Testing FeatureEngineer with Actual Data ---")
+# # Example usage (for standalone testing)
+# if __name__ == "__main__":
+#     print("--- Testing FeatureEngineer with Actual Data ---")
 
-    # Define path to the actual processed data file
-    processed_data_path = project_root / "data" / "processed" / "processed_insurance_data.csv"
-    raw_data_path = project_root / "data" / "raw" / "temp_extracted_data" / "MachineLearningRating_v3.txt"
+#     # Define path to the actual processed data file
+#     processed_data_path = project_root / "data" / "processed" / "processed_insurance_data.csv"
+#     raw_data_path = project_root / "data" / "raw" / "temp_extracted_data" / "MachineLearningRating_v3.txt"
     
-    # --- IMPORTANT: The script now *expects* the processed data to exist. ---
-    # If the file does not exist, it will raise a FileNotFoundError.
-    if not processed_data_path.is_file():
-        raise FileNotFoundError(f"Processed data file not found at: {processed_data_path}. "
-                                "Please ensure you have run previous data processing steps to create this file.")
+#     # --- IMPORTANT: The script now *expects* the processed data to exist. ---
+#     # If the file does not exist, it will raise a FileNotFoundError.
+#     if not processed_data_path.is_file():
+#         raise FileNotFoundError(f"Processed data file not found at: {processed_data_path}. "
+#                                 "Please ensure you have run previous data processing steps to create this file.")
     
-    # Load the actual processed data using the specified comma delimiter
-    df = load_data(raw_data_path, delimiter='|', file_type='txt')
+#     # Load the actual processed data using the specified comma delimiter
+#     df = load_data(raw_data_path, delimiter='|', file_type='txt')
 
-    if not df.empty:
-        print(f"Original 'TransactionMonth' dtype: {df['TransactionMonth'].dtype}")
-        print(f"Original 'TransactionMonth' head:\n{df['TransactionMonth'].head()}")
+#     if not df.empty:
+#         print(f"Original 'TransactionMonth' dtype: {df['TransactionMonth'].dtype}")
+#         print(f"Original 'TransactionMonth' head:\n{df['TransactionMonth'].head()}")
         
-        print("\nOriginal DataFrame Head (before feature engineering):")
-        print(df.head())
+#         print("\nOriginal DataFrame Head (before feature engineering):")
+#         print(df.head())
 
-        # Apply feature engineering functions sequentially
-        df_fe = create_time_features(df.copy(), 'TransactionMonth')
+#         # Apply feature engineering functions sequentially
+#         df_fe = create_time_features(df.copy(), 'TransactionMonth')
         
-        # Check if df_fe became empty after time feature creation
-        if df_fe.empty:
-            print("\nDEBUG: df_fe is empty after create_time_features. Skipping further FE steps.")
-        else:
-            df_fe = create_risk_ratio_features(df_fe.copy()) 
-            df_fe = create_vehicle_age_feature(df_fe.copy())
+#         # Check if df_fe became empty after time feature creation
+#         if df_fe.empty:
+#             print("\nDEBUG: df_fe is empty after create_time_features. Skipping further FE steps.")
+#         else:
+#             df_fe = create_risk_ratio_features(df_fe.copy()) 
+#             df_fe = create_vehicle_age_feature(df_fe.copy())
 
-        print("\nDataFrame Head after Feature Engineering:")
-        print(df_fe.head())
-        print("\nDataFrame Info after Feature Engineering:")
-        df_fe.info()
-        print("\nColumns after Feature Engineering:")
-        print(df_fe.columns.tolist())
-    else:
-        print("DataFrame is empty after loading. Skipping feature engineering testing.")
+#         print("\nDataFrame Head after Feature Engineering:")
+#         print(df_fe.head())
+#         print("\nDataFrame Info after Feature Engineering:")
+#         df_fe.info()
+#         print("\nColumns after Feature Engineering:")
+#         print(df_fe.columns.tolist())
+#     else:
+#         print("DataFrame is empty after loading. Skipping feature engineering testing.")
 
-    print("\nFeatureEngineer demonstrations complete.")
+#     print("\nFeatureEngineer demonstrations complete.")
