@@ -56,7 +56,7 @@ html_static_path = ['_static']
 # Set the URL for the external GitHub repository (optional but recommended for viewcode)
 html_context = {
     "display_github": True, # Integrate GitHub
-    "github_user": "your-github-username", # Replace with your GitHub username
+    "github_user": "michaworku", # Replace with your GitHub username
     "github_repo": "Insurance-Risk-Analytics-and-Predictive-Modeling", # Replace with your repository name
     "github_version": "main", # Or your default branch name (e.g., "master")
     "conf_py_path": "/docs/source/", # Path to conf.py relative to repo root
